@@ -28,24 +28,29 @@ Route::post('/twilio_status_callback', function () {
         $sms->save();
     }
     return response()->json(['message' => 'updated']);
-});
-
-Route::get('/point_to_point_directions', function () {
+})->middleware('throttle:200');
+Route::get('/point_to_point_distance', function () {
     request()->validate([
         'origin' => 'required|string|max:250',
         'destination' => 'required|string|max:250',
-        'depart_at' => 'required|string|max:45'
+        'depart_at' => 'required|date:Y-m-d H:i'
     ]);
+
+    $depart_in_seconds = new DateTime(request()->input('depart_at'));    
+    $depart_in_seconds = strtotime($depart_in_seconds->format('Y-m-d H:i'));
+    $now_in_seconds = strtotime(now());
+    $difference_in_weeks = $now_in_seconds > $depart_in_seconds ? abs($now_in_seconds - $depart_in_seconds)/604800 : 0;
+    $adjust_weeks_by = ceil($difference_in_weeks);
     $response = GoogleMapsFacade::load('distancematrix')
         ->setParam([
             'origins' => request()->input('origin'),
             'destinations' => request()->input('destination'),
-            'arrival_time' => strtotime(request()->input('depart_at')),
+            'departure_time' => strtotime(date('Y-m-d H:i',strtotime("+".$adjust_weeks_by." week",strtotime(request()->input('depart_at')))).' America/Los_Angeles'),
             'traffic_model' => 'best_guess'
         ])
         ->get();
         return response()->json(['message' => 'google distance between', 'distance' => json_decode($response)]);
-    });
+    })->middleware('throttle:200');
 
 Route::get('/google_address_autofill', function () {
     request()->validate([
@@ -57,7 +62,6 @@ Route::get('/google_address_autofill', function () {
         ->get();
     return response()->json(['message' => 'google autocomplete', 'addresses' => json_decode($response)]);
 });
-
 Route::get('/google_address_details', function () {
     request()->validate([
         'placeid' => 'required|string|max:150',

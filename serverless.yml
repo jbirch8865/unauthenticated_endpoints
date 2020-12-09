@@ -18,7 +18,8 @@ provider:
     DB_DATABASE: ${env:MYSQL_DATABASE}
     DB_USERNAME: ${env:MYSQL_USERNAME}
     DB_PASSWORD: ${env:MYSQL_PASSWORD}
-    
+    google_api_key: ${env:google_api_key}
+
 package:
   # Directories to exclude from deployment
   exclude:
