@@ -1,0 +1,52 @@
+service: special-endpoints
+
+provider:
+  name: aws
+  # The AWS region in which to deploy (us-east-1 is the default)
+  region: us-west-2
+  # The stage of the application, e.g. dev, production, staging… ('dev' is the default)
+  stage: prod
+  runtime: provided
+  vpc:
+    securityGroupIds:
+      - sg-036f5cdc0ca84ff88
+    subnetIds:
+      - subnet-083d31b93d87a77f6
+      - subnet-0ee565742c26c9143
+  environment:
+    DB_HOST: ${env:MYSQL_HOST}
+    DB_DATABASE: D-HProd
+    DB_USERNAME: ${env:MYSQL_USERNAME}
+    DB_PASSWORD: ${env:MYSQL_PASSWORD}
+    google_api_key: ${env:google_api_key}
+
+package:
+  # Directories to exclude from deployment
+  exclude:
+    - node_modules/**
+    - public/storage
+    - resources/assets/**
+    - storage/**
+    - tests/**
+
+functions:
+  # This function runs the Laravel website/API
+  web:
+    handler: public/index.php
+    timeout: 28 # in seconds (API Gateway has a timeout of 29 seconds)
+    layers:
+      - ${bref:layer.php-74-fpm}
+    events:
+      - http: "ANY /"
+      - http: "ANY /{proxy+}"
+  # This function lets us run artisan commands in Lambda
+  artisan:
+    handler: artisan
+    timeout: 120 # in seconds
+    layers:
+      - ${bref:layer.php-74} # PHP
+      - ${bref:layer.console} # The "console" layer
+
+plugins:
+  # We need to include the Bref plugin
+  - ./vendor/bref/bref
